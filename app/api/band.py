@@ -1,10 +1,10 @@
+from core.database import get_session
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
+from models import BandRead
+from schema import Band
+from service.band import get_band_list
 from sqlmodel import select
-
-from app.core.database import get_session
-from app.models import BandRead
-from app.schema import Band
-from app.service.band import get_band_list
 
 router = APIRouter()
 
@@ -12,11 +12,14 @@ router = APIRouter()
 @router.get(
     "",
     description="Get the list of bands in the database.",
-    response_model=list[BandRead],
 )
 async def get_bands(session=Depends(get_session)):
     bands = session.exec(select(Band)).all()
-    return [BandRead.model_validate(band.dict()) for band in bands]
+    data = [BandRead.model_validate(band.model_dump()).model_dump() for band in bands]
+    return JSONResponse(
+        content=data,
+        media_type="application/json; charset=utf-8",
+    )
 
 
 @router.post("", description="Add a new band info to the database from user input.")
@@ -33,6 +36,21 @@ async def add_band(band: Band, session=Depends(get_session)):
     return {"band_id": band.id, "band_name": band.name}
 
 
+@router.delete(
+    "/{band_id}",
+    description="Delete a band from the database.",
+)
+async def delete_band(band_id: str, session=Depends(get_session)):
+    db_band = session.get(Band, band_id)
+    if not db_band:
+        raise HTTPException(
+            status_code=404, detail=f"Band not found in database (id: {band_id})"
+        )
+    session.delete(db_band)
+    session.commit()
+    return {"band_id": band_id}
+
+
 @router.post(
     "/from_band_us",
     name="Add band from band.us",
@@ -46,5 +64,7 @@ async def add_band_from_band(
         if db_band:
             continue
         session.add(Band(**band))
-
-    return band_list
+    return JSONResponse(
+        content=band_list,
+        media_type="application/json; charset=utf-8",
+    )

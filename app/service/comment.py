@@ -1,16 +1,15 @@
 import platform
 import time
 
+from core.driver import get_driver
 from fastapi import Depends
+from models import CreateComment
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-
-from app.core.driver import get_browser_driver
-from app.models import CreateComment
 
 
 class CreateCommentService:
@@ -19,13 +18,26 @@ class CreateCommentService:
     def __init__(
         self,
         new_comment: CreateComment,
-        driver=Depends(get_browser_driver),
+        driver=Depends(get_driver),
     ):
         self.driver = driver
         self.new_comment = new_comment
         self.comments_count = 0
         self.tagged_comments_count = 0
         self.chunk_size = 100
+
+    def get_my_name(self):
+        if self.new_comment.my_name is None and self.new_comment.new:
+            self.driver.get(f"https://band.us/band/{self.new_comment.band_id}/member")
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "ul.cMemberList._memberList")
+                )
+            )
+            first_li = self.driver.find_element(
+                By.CSS_SELECTOR, "ul.cMemberList._memberList > li:first-child"
+            )
+            self.new_comment.my_name = first_li.text.split("\n")[0]
 
     def click_first_comment_button(self):
         try:
@@ -87,10 +99,14 @@ class CreateCommentService:
             count += 1
         return comment_divs
 
-    def click_name_with_condition(self, comment):
+    def click_name_with_condition(self, comment, tagged_users: set):
         name_button = comment.find_element(By.CSS_SELECTOR, "button.nameWrap")
-        if name_button.text == self.new_comment.my_name:
+        if self.new_comment.my_name[:-1] in name_button.text:
             return None
+        if len(tagged_users) > 0:
+            if name_button.text in tagged_users:
+                return None
+
         try:
             comment_body = comment.find_element(
                 By.CSS_SELECTOR, "p.txt._commentContent"
@@ -107,8 +123,39 @@ class CreateCommentService:
                 action_chain.move_to_element(name_button).click(name_button).perform()
         return name_button.text, comment_body.text
 
+    def get_tagged_users(self, comment_divs):
+        # 댓글 내용 중에서 태그된 사용자를 모아야 함
+        tagged_users = set()
+        for idx, comment in enumerate(comment_divs):
+            # 댓글을 입력한 사용자의 이름을 확인합니다. 그 이름이 내 이름이면 그 댓글 안에 태그된 사용자가 있는지 확인합니다.
+            # 태그된 사용자가 있으면 그 사용자를 tagged_users에 추가합니다.
+            name_button = comment.find_element(By.CSS_SELECTOR, "button.nameWrap")
+            if self.new_comment.my_name[:-1] not in name_button.text:
+                continue
+            try:
+                comment_body = comment.find_element(
+                    By.CSS_SELECTOR, "p.txt._commentContent"
+                )
+                tagged_users_tag = comment_body.find_elements(
+                    By.CSS_SELECTOR, "a.gBandMember"
+                )
+            except:
+                # 댓글이 없이 스티커만 있는 경우
+                pass
+
+            if len(tagged_users_tag) == 0:
+                continue
+            tagged_users_text = [user.text.split("@")[1] for user in tagged_users_tag]
+            tagged_users.update(tagged_users_text)
+        return tagged_users
+
     def add_all_tagged_comment(self):
         comment_divs = self.get_all_comments()
+        tagged_users = set()
+        if self.new_comment.new:
+            # 댓글 내용 중에서 태그된 사용자를 모아야 함
+            tagged_users = self.get_tagged_users(comment_divs)
+
         num_chunks = len(comment_divs) // self.chunk_size + (
             len(comment_divs) % self.chunk_size > 0
         )
@@ -118,10 +165,9 @@ class CreateCommentService:
             ]
             # 댓글을 입력한 사용자의 이름을 클릭합니다.
             for idx, comment in enumerate(current_chunk):
-                result = self.click_name_with_condition(comment)
+                result = self.click_name_with_condition(comment, tagged_users)
                 if result is None:
                     continue
-                print(f"{idx+1}번째 댓글 {result[0]} : {result[1]}")
             # 댓글을 입력할 수 있는 textarea를 찾습니다.
             input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
             text_area = input_section.find_element(By.TAG_NAME, "textarea")
@@ -139,19 +185,44 @@ class CreateCommentService:
             self.tagged_comments_count = (
                 len(text_area.get_attribute("value").split("@")) - 1
             )
-            print(text_area.get_attribute("value"))
-            print(self.tagged_comments_count)
-            print("댓글 갯수 : ", len(comment_divs))
+
             if self.tagged_comments_count > 0:
-                print("Tagged comments count: ", self.tagged_comments_count)
                 # 버튼을 클릭합니다.
-                # send_button.click()
-                action_chain = ActionChains(self.driver)
-                action_chain.click(text_area).key_down(self.ctrl).send_keys("a").key_up(
-                    self.ctrl
-                ).send_keys(Keys.DELETE).perform()
+                send_button.click()
+                time.sleep(1)
                 WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located(
                         (By.CLASS_NAME, "dPostCommentMainView")
                     )
                 )
+
+    def add_comment(self):
+        """
+        태그를 하지 않고 댓글을 달 때 사용합니다.
+        """
+        self.driver.get(
+            f"https://band.us/band/{self.new_comment.band_id}/post/{self.new_comment.post_id}"
+        )
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "dPostCommentMainView"))
+        )
+        # 댓글을 입력할 수 있는 textarea를 찾습니다.
+        input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
+        text_area = input_section.find_element(By.TAG_NAME, "textarea")
+        text_area.send_keys(self.new_comment.my_comment)
+
+        # input_section html 출력
+        # submit 버튼을 찾습니다.
+        send_button = WebDriverWait(self.driver, 2).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, ".writeSubmit.uButton._sendMessageButton.-active")
+            )
+        )
+        send_button.click()
+        time.sleep(1)
+
+    def create_comment(self):
+        if self.new_comment.tag:
+            self.add_all_tagged_comment()
+        else:
+            self.add_comment()

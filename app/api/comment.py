@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-
-from app.service.comment import CreateCommentService
+from service.comment import CreateCommentService
 
 router = APIRouter()
 
@@ -11,6 +10,7 @@ async def add_all_comment(
     create_comment: CreateCommentService = Depends(CreateCommentService),
 ):
     try:
+        create_comment.get_my_name()
         create_comment.add_all_tagged_comment()
     except Exception as e:
         HTTPException(status_code=400, detail=f"Failed to add comment ({e})")

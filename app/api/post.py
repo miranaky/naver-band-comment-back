@@ -1,10 +1,10 @@
+from core.database import get_session
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
+from schema import Post
+from service.post import get_latest_post_id_from_band, get_post_detail
 from sqlalchemy import desc
 from sqlmodel import select
-
-from app.core.database import get_session
-from app.schema import Post
-from app.service.post import get_latest_post_id_from_band, get_post_detail
 
 router = APIRouter()
 
@@ -23,12 +23,18 @@ async def get_post_list(
         .offset(offset)
         .limit(limit)
     ).all()
-    return posts
+    return JSONResponse(
+        content=[post.model_dump() for post in posts],
+        media_type="application/json; charset=utf-8",
+    )
 
 
-@router.get("/{band_id}/latest", name="Get latest post id from band.us")
-async def get_latest_post_id(post_id: str = Depends(get_latest_post_id_from_band)):
-    return post_id
+@router.get(
+    "/{band_id}/latest",
+    name="Get latest post id from band.us",
+)
+async def get_latest_post_id(post_id: int = Depends(get_latest_post_id_from_band)):
+    return {"latest": int(post_id)}
 
 
 @router.put(
@@ -44,6 +50,7 @@ async def put_post(
         # Update the view count and comment count
         db_post.view_count = post.view_count
         db_post.comments_count = post.comments_count
+        session.commit()
     else:
         db_post = post
         session.add(db_post)

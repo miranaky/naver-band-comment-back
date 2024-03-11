@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 from pydantic import BaseModel, computed_field
 
 
@@ -22,5 +21,7 @@ class CreateComment(BaseModel):
     band_id: str
     post_id: str
     my_comment: str
-    my_name: str
+    tag: bool = True
+    new: bool = True
+    my_name: Optional[str] = None
     check_message: Optional[str] = None

@@ -1,14 +1,13 @@
 from bs4 import BeautifulSoup
+from core.driver import get_driver
 from fastapi import Depends
+from schema import Post
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app.core.driver import get_driver
-from app.schema import Post
 
-
-def get_latest_post_id_from_band(band_id, driver=Depends(get_driver)) -> str:
+def get_latest_post_id_from_band(band_id, driver=Depends(get_driver)) -> int:
     driver.get(f"https://band.us/band/{band_id}")
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located(
@@ -21,7 +20,7 @@ def get_latest_post_id_from_band(band_id, driver=Depends(get_driver)) -> str:
     post_list_html = driver.execute_script("return document.documentElement.outerHTML;")
     _post_summary = get_post_summary(band_id, post_list_html)
 
-    return _post_summary[0]["id"]
+    return int(_post_summary[0]["id"])
 
 
 def get_post_detail(band_id, post_id, driver=Depends(get_driver)) -> Post:
@@ -34,13 +33,17 @@ def get_post_detail(band_id, post_id, driver=Depends(get_driver)) -> Post:
     soup = BeautifulSoup(post_html, "lxml")
     post_head = soup.find("div", class_="postWriterInfoWrap")
     created_at = post_head.find("time", class_="time").text
-    view_count = post_head.find("span", class_="readCount").text.split(" ")[0]
+    try:
+        view_count = post_head.find("span", class_="readCount").text.split(" ")[0]
+    except AttributeError:
+        view_count = "0"
     post = soup.find("div", class_="postBody")
     _post_text_list = post.find_all(
         "div", attrs={"data-viewname": "DPostTextView", "class": "dPostTextView"}
     )
     post_text_list = [p.get_text(separator="\n") for p in _post_text_list]
     post_text = "\n".join(post_text_list)
+
     count_divs = soup.find("div", class_="postCount")
     try:
         comment_count = count_divs.find_all("span", class_="count")[-1].text
@@ -48,7 +51,7 @@ def get_post_detail(band_id, post_id, driver=Depends(get_driver)) -> Post:
         comment_count = "0"
     return Post(
         id=post_id,
-        content=post_text,
+        content=post_text[2:-4],
         band_id=band_id,
         comments_count=comment_count,
         view_count=view_count,

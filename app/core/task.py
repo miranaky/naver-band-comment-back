@@ -1,11 +1,10 @@
 from typing import Callable
 
+from core.database import Database
 from fastapi import FastAPI
 
-from app.core.database import Database
 
-
-def create_start_app_handler(app: FastAPI) -> Callable:
+def create_start_handler(app: FastAPI) -> Callable:
     async def start_app():
         database = Database()
         database.create_database()
