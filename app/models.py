@@ -1,20 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, computed_field
-
-
-class LoggedInUser(BaseModel):
-    username: str
-    user_no: int
-
-
-class BandRead(BaseModel):
-    id: int
-    name: str
-
-    @computed_field
-    def band_url(self) -> str:
-        return f"https://band.us/band/{self.id}"
+from pydantic import BaseModel
 
 
 class CreateComment(BaseModel):

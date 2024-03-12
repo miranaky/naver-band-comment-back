@@ -2,7 +2,7 @@ import sys
 import time
 from typing import Optional
 
-from core.driver import get_browser_driver, get_driver
+from app.core.driver import get_browser_driver, get_driver
 from fastapi import APIRouter, Body, Depends
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By

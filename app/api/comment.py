@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from service.comment import CreateCommentService
+from app.service.comment import CreateCommentService
 
 router = APIRouter()
 

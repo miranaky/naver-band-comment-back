@@ -1,5 +1,4 @@
-from api import router as api_router
-from core import task
+from app.api import router as api_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -16,17 +15,15 @@ def get_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_event_handler("startup", task.create_start_handler(app))
 
     return app
 
 
 def serve():
     import uvicorn
-
-    uvicorn.run(
-        "main:get_app", port=8098, log_level="info", reload=True, reload_dirs=["./"]
-    )
+    import multiprocessing
+    multiprocessing.freeze_support()
+    uvicorn.run("app.main:get_app",host="0.0.0.0", port=8098, log_level="info",reload=False)
 
 
 if __name__ == "__main__":
