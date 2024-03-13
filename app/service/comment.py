@@ -1,15 +1,16 @@
 import platform
 import time
 
-from app.core.driver import get_driver
 from fastapi import Depends
-from app.models import CreateComment
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from app.core.driver import get_driver
+from app.models import CreateComment
 
 
 class CreateCommentService:
@@ -90,10 +91,12 @@ class CreateCommentService:
             comment_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.cComment")
             if len(comment_divs) == int(number_of_comments):
                 self.comments_count = len(comment_divs)
-                print("댓글 갯수가 일치합니다.")
+                print(
+                    f"댓글 갯수가 일치합니다. {len(comment_divs)} : {number_of_comments}"
+                )
                 break
             print(
-                f"댓글 갯수가 일치하지 않습니다. {len(comment_divs)} / {number_of_comments}"
+                f"댓글 갯수가 일치하지 않습니다. {len(comment_divs)} : {number_of_comments}"
             )
             time.sleep(1)
             count += 1
@@ -101,7 +104,11 @@ class CreateCommentService:
 
     def click_name_with_condition(self, comment, tagged_users: set):
         name_button = comment.find_element(By.CSS_SELECTOR, "button.nameWrap")
-        if self.new_comment.my_name[:-1] in name_button.text:
+
+        if (
+            self.new_comment.my_name is not None
+            and self.new_comment.my_name[:-1] in name_button.text
+        ):
             return None
         if len(tagged_users) > 0:
             if name_button.text in tagged_users:
@@ -155,7 +162,6 @@ class CreateCommentService:
         if self.new_comment.new:
             # 댓글 내용 중에서 태그된 사용자를 모아야 함
             tagged_users = self.get_tagged_users(comment_divs)
-
         num_chunks = len(comment_divs) // self.chunk_size + (
             len(comment_divs) % self.chunk_size > 0
         )
@@ -164,7 +170,7 @@ class CreateCommentService:
                 i * self.chunk_size : (i + 1) * self.chunk_size
             ]
             # 댓글을 입력한 사용자의 이름을 클릭합니다.
-            for idx, comment in enumerate(current_chunk):
+            for comment in current_chunk:
                 result = self.click_name_with_condition(comment, tagged_users)
                 if result is None:
                     continue
@@ -223,6 +229,7 @@ class CreateCommentService:
 
     def create_comment(self):
         if self.new_comment.tag:
+            self.get_my_name()
             self.add_all_tagged_comment()
         else:
             self.add_comment()
