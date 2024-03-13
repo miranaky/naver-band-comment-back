@@ -1,5 +1,5 @@
-from app.api.comment import router as comment_router
-from app.api.users import router as users_router
+from api.comment import router as comment_router
+from api.users import router as users_router
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/api")

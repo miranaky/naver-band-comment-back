@@ -1,16 +1,15 @@
 import platform
 import time
 
+from core.driver import get_driver
 from fastapi import Depends
+from models import CreateComment
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-
-from app.core.driver import get_driver
-from app.models import CreateComment
 
 
 class CreateCommentService:

@@ -1,4 +1,4 @@
-from app.api import router as api_router
+from api import router as api_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -20,10 +20,14 @@ def get_app() -> FastAPI:
 
 
 def serve():
-    import uvicorn
     import multiprocessing
+
+    import uvicorn
+
     multiprocessing.freeze_support()
-    uvicorn.run("app.main:get_app",host="0.0.0.0", port=8098, log_level="info",reload=False)
+    uvicorn.run(
+        "main:get_app", host="0.0.0.0", port=8098, log_level="info", reload=False
+    )
 
 
 if __name__ == "__main__":
