@@ -2,6 +2,7 @@ import random
 from contextlib import contextmanager
 from pathlib import Path
 
+from models import CreateComment
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -55,9 +56,15 @@ def webdriver_context():
         browser_driver.quit()
 
 
-def get_driver():
-    with headless_webdriver_context() as driver:
-        yield driver
+def get_driver(
+    new_comment: CreateComment,
+):
+    if new_comment.view:
+        with webdriver_context() as browser_driver:
+            yield browser_driver
+    else:
+        with headless_webdriver_context() as driver:
+            yield driver
 
 
 def get_browser_driver():

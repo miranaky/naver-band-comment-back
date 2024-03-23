@@ -9,6 +9,6 @@ class CreateComment(BaseModel):
     my_comment: str
     tag: bool = True
     new: bool = True
-    test: bool = False
+    view: bool = False
     my_name: Optional[str] = None
     check_message: Optional[str] = None
