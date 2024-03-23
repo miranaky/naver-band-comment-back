@@ -1,6 +1,7 @@
 import platform
 import time
 
+import pyperclip
 from fastapi import Depends
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
@@ -9,7 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app.core.driver import get_driver
+from app.core.driver import get_browser_driver, get_driver
 from app.models import CreateComment
 
 
@@ -20,8 +21,9 @@ class CreateCommentService:
         self,
         new_comment: CreateComment,
         driver=Depends(get_driver),
+        test_driver=Depends(get_browser_driver),
     ):
-        self.driver = driver
+        self.driver = driver if not new_comment.test else test_driver
         self.new_comment = new_comment
         self.comments_count = 0
         self.tagged_comments_count = 0
@@ -42,7 +44,7 @@ class CreateCommentService:
 
     def click_first_comment_button(self):
         try:
-            go_to_first_comment_button = WebDriverWait(self.driver, 3).until(
+            go_to_first_comment_button = WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, "goFirstComment"))
             )
             go_to_first_comment_button.click()
@@ -54,7 +56,7 @@ class CreateCommentService:
         counter = 0
         while True:
             try:
-                more_comment_button = WebDriverWait(self.driver, 3).until(
+                more_comment_button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.CLASS_NAME, "moreView"))
                 )
                 more_comment_button.click()
@@ -76,7 +78,14 @@ class CreateCommentService:
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "dPostCommentMainView"))
         )
-
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(
+                (
+                    By.CSS_SELECTOR,
+                    "span.comment._commentCountBtn.gCursorDefault span.count",
+                )
+            )
+        )
         number_of_comments_div = self.driver.find_element(
             By.CSS_SELECTOR, "span.comment._commentCountBtn.gCursorDefault span.count"
         )
@@ -87,7 +96,16 @@ class CreateCommentService:
             self.click_more_comment_button()
         comment_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.cComment")
         count = 0
-        while count < 2:
+        if len(comment_divs) > number_of_comments:
+            print(f"전체 댓글 갯수를 못 불러왔습니다.  {number_of_comments}")
+            number_of_comments_div = self.driver.find_element(
+                By.CSS_SELECTOR,
+                "span.comment._commentCountBtn.gCursorDefault span.count",
+            )
+            number_of_comments = int(number_of_comments_div.text)
+            self.click_first_comment_button()
+            self.click_more_comment_button()
+        while count < 5:
             comment_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.cComment")
             if len(comment_divs) == int(number_of_comments):
                 self.comments_count = len(comment_divs)
@@ -177,8 +195,19 @@ class CreateCommentService:
             # 댓글을 입력할 수 있는 textarea를 찾습니다.
             input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
             text_area = input_section.find_element(By.TAG_NAME, "textarea")
-            text_area.send_keys(self.new_comment.my_comment)
+            try:
+                pyperclip.copy(self.new_comment.my_comment)
 
+                text_area.send_keys(
+                    Keys.COMMAND, "v"
+                ) if platform.system() == "Darwin" else text_area.send_keys(
+                    Keys.CONTROL, "v"
+                )
+                text_area.send_keys(Keys.SPACE)
+                text_area.send_keys(Keys.BACKSPACE)
+            except Exception as e:
+                print(f"Failed to paste comment ({e})")
+                raise e
             # input_section html 출력
             # submit 버튼을 찾습니다.
             send_button = WebDriverWait(self.driver, 2).until(
@@ -215,7 +244,19 @@ class CreateCommentService:
         # 댓글을 입력할 수 있는 textarea를 찾습니다.
         input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
         text_area = input_section.find_element(By.TAG_NAME, "textarea")
-        text_area.send_keys(self.new_comment.my_comment)
+        try:
+            pyperclip.copy(self.new_comment.my_comment)
+
+            text_area.send_keys(
+                Keys.COMMAND, "v"
+            ) if platform.system() == "Darwin" else text_area.send_keys(
+                Keys.CONTROL, "v"
+            )
+            text_area.send_keys(Keys.SPACE)
+            text_area.send_keys(Keys.BACKSPACE)
+        except Exception as e:
+            print(f"Failed to paste comment ({e})")
+            raise e
 
         # input_section html 출력
         # submit 버튼을 찾습니다.
