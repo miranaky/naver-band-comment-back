@@ -9,7 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app.core.driver import get_browser_driver, get_driver
+from app.core.driver import get_browser_driver, get_driver, get_headless_driver
 from app.core.driver import get_browser_driver, get_driver
 
 router = APIRouter()
@@ -64,7 +64,7 @@ async def get_my_profile(driver=Depends(get_driver)):
 
 
 @router.delete("/logout")
-async def logout(driver=Depends(get_driver)):
+async def logout(driver=Depends(get_headless_driver)):
     driver.get("https://band.us/")
     try:
         header_widget_area = WebDriverWait(driver, 10).until(

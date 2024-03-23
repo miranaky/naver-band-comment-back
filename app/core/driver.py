@@ -67,6 +67,9 @@ def get_driver(
         with headless_webdriver_context() as driver:
             yield driver
 
+def get_headless_driver():
+    with headless_webdriver_context() as driver:
+        yield driver
 
 def get_browser_driver():
     with webdriver_context() as browser_driver:
