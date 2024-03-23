@@ -7,6 +7,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+from app.models import CreateComment
+
 current_path = Path(__file__).parent.absolute()
 
 user_agents = [
@@ -55,9 +57,15 @@ def webdriver_context():
         browser_driver.quit()
 
 
-def get_driver():
-    with headless_webdriver_context() as driver:
-        yield driver
+def get_driver(
+    new_comment: CreateComment,
+):
+    if new_comment.view:
+        with webdriver_context() as driver:
+            yield driver
+    else:
+        with headless_webdriver_context() as driver:
+            yield driver
 
 
 def get_browser_driver():
