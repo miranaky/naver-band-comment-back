@@ -1,7 +1,8 @@
 import platform
 import time
 
-from core.driver import get_driver
+import pyperclip
+from core.driver import get_browser_driver, get_driver
 from fastapi import Depends
 from models import CreateComment
 from selenium.common.exceptions import TimeoutException
@@ -19,8 +20,9 @@ class CreateCommentService:
         self,
         new_comment: CreateComment,
         driver=Depends(get_driver),
+        test_driver=Depends(get_browser_driver),
     ):
-        self.driver = driver
+        self.driver = driver if not new_comment.test else test_driver
         self.new_comment = new_comment
         self.comments_count = 0
         self.tagged_comments_count = 0
@@ -41,7 +43,7 @@ class CreateCommentService:
 
     def click_first_comment_button(self):
         try:
-            go_to_first_comment_button = WebDriverWait(self.driver, 3).until(
+            go_to_first_comment_button = WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, "goFirstComment"))
             )
             go_to_first_comment_button.click()
@@ -53,7 +55,7 @@ class CreateCommentService:
         counter = 0
         while True:
             try:
-                more_comment_button = WebDriverWait(self.driver, 3).until(
+                more_comment_button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.CLASS_NAME, "moreView"))
                 )
                 more_comment_button.click()
@@ -86,7 +88,8 @@ class CreateCommentService:
             self.click_more_comment_button()
         comment_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.cComment")
         count = 0
-        while count < 2:
+        while count < 5:
+            # TODO: 댓글 갯수 일치하게 수정하기
             comment_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.cComment")
             if len(comment_divs) == int(number_of_comments):
                 self.comments_count = len(comment_divs)
@@ -176,7 +179,18 @@ class CreateCommentService:
             # 댓글을 입력할 수 있는 textarea를 찾습니다.
             input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
             text_area = input_section.find_element(By.TAG_NAME, "textarea")
-            text_area.send_keys(self.new_comment.my_comment)
+            try:
+                pyperclip.copy(self.new_comment.my_comment)
+                text_area.send_keys(
+                    Keys.COMMAND, "v"
+                ) if platform.system() == "Darwin" else text_area.send_keys(
+                    Keys.CONTROL, "v"
+                )
+                text_area.send_keys(".")
+                text_area.send_keys(Keys.BACKSPACE)
+            except Exception as e:
+                print(f"Failed to add comment ({e})")
+                raise e
 
             # input_section html 출력
             # submit 버튼을 찾습니다.
@@ -214,7 +228,18 @@ class CreateCommentService:
         # 댓글을 입력할 수 있는 textarea를 찾습니다.
         input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
         text_area = input_section.find_element(By.TAG_NAME, "textarea")
-        text_area.send_keys(self.new_comment.my_comment)
+        try:
+            pyperclip.copy(self.new_comment.my_comment)
+            text_area.send_keys(
+                Keys.COMMAND, "v"
+            ) if platform.system() == "Darwin" else text_area.send_keys(
+                Keys.CONTROL, "v"
+            )
+            text_area.send_keys(".")
+            text_area.send_keys(Keys.BACKSPACE)
+        except Exception as e:
+            print(f"Failed to add comment ({e})")
+            raise e
 
         # input_section html 출력
         # submit 버튼을 찾습니다.
@@ -224,11 +249,12 @@ class CreateCommentService:
             )
         )
         send_button.click()
-        time.sleep(1)
+        time.sleep(5)
 
     def create_comment(self):
         if self.new_comment.tag:
-            self.get_my_name()
-            self.add_all_tagged_comment()
+            self.get_all_comments()
+            # self.get_my_name()
+            # self.add_all_tagged_comment()
         else:
             self.add_comment()

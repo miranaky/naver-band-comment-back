@@ -26,7 +26,7 @@ def serve():
 
     multiprocessing.freeze_support()
     uvicorn.run(
-        "main:get_app", host="0.0.0.0", port=8098, log_level="info", reload=False
+        "main:get_app", host="0.0.0.0", port=8098, log_level="info", reload=True
     )
 
 
