@@ -2,13 +2,15 @@ import sys
 import time
 from typing import Optional
 
-from app.core.driver import get_browser_driver, get_driver
 from fastapi import APIRouter, Body, Depends
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from app.core.driver import get_browser_driver, get_driver
+from app.core.driver import get_browser_driver, get_driver
 
 router = APIRouter()
 
@@ -64,9 +66,12 @@ async def get_my_profile(driver=Depends(get_driver)):
 @router.delete("/logout")
 async def logout(driver=Depends(get_driver)):
     driver.get("https://band.us/")
-    header_widget_area = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "headerWidgetArea"))
-    )
+    try:
+        header_widget_area = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "headerWidgetArea"))
+        )
+    except TimeoutException:
+        return "logout"
     header_widget_area.find_element(
         By.CSS_SELECTOR, "button.btnMySetting._btnMySetting._btnWidgetIcon"
     ).click()
