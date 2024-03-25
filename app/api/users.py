@@ -2,7 +2,7 @@ import sys
 import time
 from typing import Optional
 
-from core.driver import get_browser_driver, get_driver
+from core.driver import get_browser_driver, get_headless_driver
 from fastapi import APIRouter, Body, Depends
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -49,7 +49,7 @@ async def login(
 
 
 @router.get("/profile")
-async def get_my_profile(driver=Depends(get_driver)):
+async def get_my_profile(driver=Depends(get_headless_driver)):
     try:
         driver.get("https://band.us/my/profiles/1")
         profile_info = WebDriverWait(driver, 5).until(
@@ -61,8 +61,20 @@ async def get_my_profile(driver=Depends(get_driver)):
         return False
 
 
+@router.get("/{band_id}/my_name")
+async def get_my_name(band_id: str, driver=Depends(get_headless_driver)):
+    driver.get(f"https://band.us/band/{band_id}/member")
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "ul.cMemberList._memberList"))
+    )
+    first_li = driver.find_element(
+        By.CSS_SELECTOR, "ul.cMemberList._memberList > li:first-child"
+    )
+    return first_li.text.split("\n")[0]
+
+
 @router.delete("/logout")
-async def logout(driver=Depends(get_driver)):
+async def logout(driver=Depends(get_headless_driver)):
     driver.get("https://band.us/")
     try:
         header_widget_area = WebDriverWait(driver, 10).until(
