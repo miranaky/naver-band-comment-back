@@ -9,16 +9,15 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app.core.driver import get_browser_driver, get_driver, get_headless_driver
-from app.core.driver import get_browser_driver, get_driver
+from app.core.driver import get_browser_driver, get_headless_driver
 
 router = APIRouter()
 
 
 @router.post("/login")
 async def login(
-    user_id: Optional[str] = Body(None),  # "smkang0321@gmail.com",
-    user_pw: Optional[str] = Body(None),  # "cjdfyd2024!!",
+    user_id: Optional[str] = Body(None),
+    user_pw: Optional[str] = Body(None),
     driver=Depends(get_browser_driver),
 ):
     driver.get("https://band.us/")
@@ -51,16 +50,28 @@ async def login(
 
 
 @router.get("/profile")
-async def get_my_profile(driver=Depends(get_driver)):
+async def get_my_profile(driver=Depends(get_headless_driver)):
     try:
         driver.get("https://band.us/my/profiles/1")
         profile_info = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.profileInfo"))
         )
-        profile_name = profile_info.find_element(By.CLASS_NAME, "profileName").text
+        profile_info.find_element(By.CLASS_NAME, "profileName").text
         return True
     except TimeoutException:
         return False
+
+
+@router.get("/{band_id}/my_name")
+async def get_my_name(band_id: str, driver=Depends(get_headless_driver)):
+    driver.get(f"https://band.us/band/{band_id}/member")
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "ul.cMemberList._memberList"))
+    )
+    first_li = driver.find_element(
+        By.CSS_SELECTOR, "ul.cMemberList._memberList > li:first-child"
+    )
+    return first_li.text.split("\n")[0]
 
 
 @router.delete("/logout")
