@@ -50,6 +50,8 @@ def webdriver_context():
     browser_driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()), options=_options
     )
+    driver_version = browser_driver.capabilities["browserVersion"]
+    print(f"Chrome version: {driver_version}")
     try:
         yield browser_driver
     finally:

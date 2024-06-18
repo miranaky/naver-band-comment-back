@@ -12,3 +12,4 @@ class CreateComment(BaseModel):
     view: bool = False
     my_name: Optional[str] = None
     check_message: Optional[str] = None
+    image_file: Optional[str] = None
