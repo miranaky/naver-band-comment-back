@@ -25,7 +25,7 @@ def headless_webdriver_context():
     user_agent = random.choice(user_agents)
     options.add_argument(f"--user-agent={user_agent}")
     options.add_argument(f"--user-data-dir={current_path.joinpath('user_data')}")
-    options.add_argument("--no-sandbox")
+    # options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
@@ -51,6 +51,8 @@ def webdriver_context():
     browser_driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()), options=_options
     )
+    browser_version = browser_driver.capabilities['browserVersion']
+    print(f"Chrome version: {browser_version}")
     try:
         yield browser_driver
     finally:

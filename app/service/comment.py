@@ -209,7 +209,8 @@ class CreateCommentService:
                 input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
                 text_area = input_section.find_element(By.TAG_NAME, "textarea")
                 self.write_comment(text_area)
-
+                if self.new_comment.image_file:
+                    self.add_image()
                 # input_section html 출력
                 # submit 버튼을 찾습니다.
                 send_button = WebDriverWait(self.driver, 2).until(
@@ -264,7 +265,8 @@ class CreateCommentService:
                 input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
                 text_area = input_section.find_element(By.TAG_NAME, "textarea")
                 self.write_comment(text_area)
-
+                if self.new_comment.image_file:
+                    self.add_image()
                 # input_section html 출력
                 # submit 버튼을 찾습니다.
                 send_button = WebDriverWait(self.driver, 2).until(
@@ -313,7 +315,8 @@ class CreateCommentService:
         input_section = self.driver.find_element(By.CLASS_NAME, "uInputComment")
         text_area = input_section.find_element(By.TAG_NAME, "textarea")
         self.write_comment(text_area)
-
+        if self.new_comment.image_file:
+            self.add_image()
         # input_section html 출력
         # submit 버튼을 찾습니다.
         send_button = WebDriverWait(self.driver, 2).until(
@@ -324,6 +327,27 @@ class CreateCommentService:
         send_button.click()
         time.sleep(5)
 
+    def add_image(self):
+        # 이미지 파일을 업로드합니다.
+        upload_menu_btn = WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    '//button[@class="btnUpload _btnUpload" and @type="button"]',
+                )
+            )
+        )
+        upload_menu_btn.click()
+        file_input = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    '//input[@name="attachment" and contains(@class, "_imageUploadButton")]',
+                )
+            )
+        )
+        file_input.send_keys(self.new_comment.image_file)
+        
     def create_comment(self):
         if self.new_comment.tag:
             if self.new_comment.new:
