@@ -1,5 +1,6 @@
 import platform
 import time
+import traceback
 
 from core.driver import get_driver
 from fastapi import Depends
@@ -329,24 +330,27 @@ class CreateCommentService:
 
     def add_image(self):
         # 이미지 파일을 업로드합니다.
-        upload_menu_btn = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    '//button[@class="btnUpload _btnUpload" and @type="button"]',
+        try:
+            upload_menu_btn = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        '//button[@class="btnUpload _btnUpload" and @type="button"]',
+                    )
                 )
             )
-        )
-        upload_menu_btn.click()
-        file_input = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located(
-                (
-                    By.XPATH,
-                    '//input[@name="attachment" and contains(@class, "_imageUploadButton")]',
+            upload_menu_btn.click()
+            file_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(
+                    (
+                        By.XPATH,
+                        '//input[@name="attachment" and contains(@class, "_imageUploadButton")]',
+                    )
                 )
             )
-        )
-        file_input.send_keys(self.new_comment.image_file)
+            file_input.send_keys(self.new_comment.image_file)
+        except Exception:
+            traceback.print_exc()
 
     def create_comment(self):
         if self.new_comment.tag:
